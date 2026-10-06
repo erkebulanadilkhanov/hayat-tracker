@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Hayat tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Literata:wght@600&family=Onest:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0e1a24;--p:#15283a;--t:#e8f0f4;--m:#8fa5b3;--l:#223a4e;--g:#4fb3a5;--on:#06201c;--a1:#4fb3a5;--a2:#f2d98d;--a3:#9aa5f2}
+@media(prefers-color-scheme:light){:root{--bg:#eef3f5;--p:#fff;--t:#14222d;--m:#5f7584;--l:#d6e2e9;--g:#1f7f73;--on:#fff;--a1:#1f9a8b;--a2:#c8941a;--a3:#6572d9}}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.5 Onest,system-ui,sans-serif;color:var(--t);background:radial-gradient(600px 320px at 50% 0,rgba(79,179,165,.16),transparent) no-repeat,var(--bg);padding:env(safe-area-inset-top) 0 110px}
+main{max-width:520px;margin:auto;padding:18px 16px}
+header small{color:var(--m);text-transform:capitalize}
+header b{display:block;font:600 28px/1.2 Literata,Georgia,serif;margin-top:2px}
+.hero{display:flex;align-items:center;gap:18px;margin:18px 0 22px}.hero svg{flex:none}
+.tr,.ar{fill:none;stroke-width:14;stroke-linecap:round;transform:rotate(-90deg);transform-origin:110px 110px}.tr{stroke:var(--l)}
+.ar{animation:f 1.1s ease-out}@keyframes f{from{stroke-dashoffset:var(--c)}}
+@media(prefers-reduced-motion:reduce){.ar{animation:none}}
+.big{font:600 34px Literata,Georgia,serif;fill:var(--t)}.cap{font-size:13px;fill:var(--m)}
+.lg{flex:1;display:grid;gap:10px}.lg div{display:flex;align-items:center;gap:8px}.lg b{margin-left:auto}.lg i{width:10px;height:10px;border-radius:50%}
+.panel{background:var(--p);border:1px solid var(--l);border-radius:20px;padding:18px;margin:14px 0}
+h2{margin:0 0 10px;font:600 19px Literata,Georgia,serif}
+.m{color:var(--m);font-size:14px}p{margin:8px 0}
+input,select,textarea,button{font:inherit;padding:12px 14px;border-radius:12px;border:1px solid var(--l);background:var(--bg);color:var(--t);width:100%;margin-top:6px}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--g);outline-offset:2px}
+button{background:var(--g);color:var(--on);border:0;font-weight:600;margin-top:12px}
+.row{display:flex;gap:8px}.row button{margin:6px 0 0;padding:12px 0;background:var(--l);color:var(--t)}.row .on{background:var(--g);color:var(--on)}
+.streak{display:flex;align-items:baseline;gap:10px}.streak b{font:600 34px Literata,Georgia,serif;color:var(--a2)}
+nav{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom));display:flex;gap:4px;width:min(92%,440px);padding:6px;border-radius:22px;background:var(--p);border:1px solid var(--l)}
+nav button{margin:0;padding:8px 0;font-size:12px;font-weight:500;background:none;color:var(--m);border-radius:16px}nav span{display:block;font-size:18px}nav .on{background:var(--l);color:var(--t)}
+</style></head><body><main id="app"></main>
+<script>
+// ВСТАВЬ ссылку веб-приложения (оканчивается на /exec) и свои имена (как в Code.gs)
+const API='https://script.google.com/macros/s/AKfycbzwdyrcs-bAg51369RxlA9SrdVcvWDbBmR9bhWu0QYxZ8jfuqKDnCZiLnGpInXL-dswbg/exec', NAMES=['yerkebulan','hayat'];
+const G={namaz:5,books:10,quran:5}, LBL={namaz:'намаз',books:'книги',quran:'Құран'};
+let me=null,pin='',data=null,tab='t',day='',nz=0,msg='';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){}}
+async function call(a,p={}){
+  const r=await fetch(API+'?'+new URLSearchParams({a,u:me,pin,...p}));
+  const j=await r.json();if(j.error)throw new Error(j.error);data=j;if(!day)day=j.today;return j}
+const add=(s,n)=>{const d=new Date(s+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
+const ws=s=>add(s,-((new Date(s+'T12:00:00Z').getUTCDay()+6)%7)), fm=s=>s.slice(8)+'.'+s.slice(5,7);
+const full=e=>!!e&&e.namaz>=5&&e.books>=10&&e.quran>=5;
+const ent=(u,d)=>data.days.find(x=>x.user===u&&x.day===d);
+function streak(u,d){if(!full(ent(u,d))&&d===data.today)d=add(d,-1);let n=0;while(full(ent(u,d))){n++;d=add(d,-1)}return n}
+function pairStreak(d){const ok=x=>NAMES.every(u=>full(ent(u,x)));if(!ok(d)&&d===data.today)d=add(d,-1);let n=0;while(ok(d)){n++;d=add(d,-1)}return n}
+
+function dayHtml(d){
+  let h='',gaps=[],pg=0,ans=0,fl=0;
+  NAMES.forEach(u=>{const e=ent(u,d);
+    if(!e){h+=`<p><b>${esc(u)}</b>: ещё не отметился(лась)</p>`;return}
+    ans++;pg+=e.books+e.quran;
+    const pct=Math.round(100*(Math.min(e.namaz,5)/5+Math.min(e.books,10)/10+Math.min(e.quran,5)/5)/3);
+    if(full(e))fl++;else for(const k in G)if(e[k]<G[k])gaps.push(`${u}: ${LBL[k]} (не хватило ${G[k]-e[k]})`);
+    h+=`<p><b>${esc(u)}</b>${full(e)?' ✅':''}<br>Намаз ${e.namaz}/5 · Книги ${e.books}/10 · Құран ${e.quran}/5<br><span class=m>Выполнено ${pct}% · серия ${streak(u,d)} дн.</span></p>`});
+  h+=`<p>Вместе: ${pg} стр.</p>`;
+  if(ans==NAMES.length)h+=fl==ans?`<p>🌙 Оба выполнили все цели! Общая серия: ${pairStreak(d)} дн.</p>`:`<p class=m>Можно добрать:<br>${gaps.map(esc).join('<br>')}</p>`;
+  return h}
+
+function weekHtml(m){
+  const days=[0,1,2,3,4,5,6].map(i=>add(m,i));let h='',pg=0;const cap={namaz:0,books:0,quran:0};
+  NAMES.forEach(u=>{const es=days.map(d=>ent(u,d)).filter(Boolean),s=k=>es.reduce((a,e)=>a+e[k],0);
+    es.forEach(e=>{for(const k in G)cap[k]+=Math.min(e[k],G[k])});pg+=s('books')+s('quran');
+    h+=`<p><b>${esc(u)}</b><br>Намаз ${s('namaz')}/35 · Книги ${s('books')} стр. · Құран ${s('quran')} стр.<br><span class=m>Дней со всеми целями: ${days.filter(d=>full(ent(u,d))).length}/7</span></p>`});
+  const both=days.filter(d=>NAMES.every(u=>full(ent(u,d)))).length;
+  const w=Object.keys(G).map(k=>[k,cap[k]/(G[k]*7*NAMES.length)]).sort((a,b)=>a[1]-b[1])[0];
+  return h+`<p>Вместе: ${pg} стр. · оба выполнили всё: ${both}/7</p><p class=m>${w[1]>=1?'🌟 Все цели недели выполнены!':'Слабое место: '+LBL[w[0]]+' ('+Math.round(w[1]*100)+'%)'}</p>`}
+
+function rings(e){const R=[[90,'namaz','var(--a1)'],[68,'books','var(--a2)'],[46,'quran','var(--a3)']];let done=0,s='',lg='';
+  R.forEach(([r,k,c])=>{const v=+e[k]||0,p=Math.min(1,v/G[k]),L=+(2*Math.PI*r).toFixed(1);if(p>=1)done++;
+    s+=`<circle cx=110 cy=110 r=${r} class=tr /><circle cx=110 cy=110 r=${r} stroke="${c}" class=ar style="--c:${L};stroke-dasharray:${L};stroke-dashoffset:${(L*(1-p)).toFixed(1)}"/>`;
+    lg+=`<div><i style="background:${c}"></i>${LBL[k]}<b>${v}/${G[k]}</b></div>`});
+  return `<section class=hero><svg viewBox="0 0 220 220" width=190 height=190 role=img aria-label="Прогресс дня">${s}<text x=110 y=112 text-anchor=middle class=big>${done}/3</text><text x=110 y=134 text-anchor=middle class=cap>целей</text></svg><div class=lg>${lg}</div></section>`}
+function hdr(){const d=new Date((day||data.today)+'T12:00:00Z').toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'});return `<header><small>${d}</small><b>Салам, ${esc(me)}</b></header>`}
+function viewToday(){
+  const e=ent(me,day)||{namaz:0,books:'',quran:''};nz=e.namaz;
+  return rings(e)+`<div class=panel><h2>Отметка</h2><input type=date id=dt value="${day}" onchange="day=this.value;draw()">
+  <p class=m>Намаз без қаза (цель 5)</p><div class=row>${[0,1,2,3,4,5].map(i=>`<button class="${i==nz?'on':''}" onclick="pick(${i})">${i}</button>`).join('')}</div>
+  <p class=m>Страниц духовных книг (цель 10)</p><input id=bk type=number inputmode=numeric min=0 value="${e.books}">
+  <p class=m>Страниц Құран (цель 5)</p><input id=qr type=number inputmode=numeric min=0 value="${e.quran}">
+  <button onclick="save()">Сохранить</button><p class=m>${msg}</p></div>
+  <div class="panel streak"><b>${streak(me,data.today)}</b><span>дн. подряд со всеми целями</span></div>`}
+function pick(i){nz=i;document.querySelectorAll('.row button').forEach((b,j)=>b.className=j==i?'on':'')}
+async function save(){msg='';try{await call('save',{day,namaz:nz,books:$('#bk').value||0,quran:$('#qr').value||0});msg='✅ Сохранено'}catch(e){msg='Ошибка: '+e.message}draw()}
+
+function viewStats(){
+  return `<div class=panel><h2>Итоги дня</h2><input type=date value="${day}" onchange="day=this.value;draw()">${dayHtml(day)}</div>
+  <div class=panel><h2>Неделя ${fm(ws(day))} – ${fm(add(ws(day),6))}</h2>${weekHtml(ws(day))}</div>`}
+
+function viewBooks(){
+  const cur=data.books.find(b=>b.user===me&&!b.end);let h='<div class=panel><h2>Текущая книга</h2>';
+  if(cur){const n=Math.round((new Date(data.today)-new Date(cur.start))/864e5)+1;
+    h+=`<p><b>${esc(cur.title)}</b><br><span class=m>с ${fm(cur.start)} · ${n} дн.</span></p><p class=m>Закончил(а)? Оценка:</p>
+    <select id=rt>${[5,4,3,2,1].map(i=>`<option>${i}</option>`).join('')}</select><textarea id=rv rows=3 placeholder="Твой отзыв"></textarea>
+    <button onclick="fin()">Закончить книгу</button>`}
+  else h+=`<input id=bt placeholder="Название книги"><button onclick="bs()">Начать читать</button>`;
+  h+='</div><div class=panel><h2>Прочитано</h2>';
+  const done=data.books.filter(b=>b.end).reverse();
+  h+=done.length?done.map(b=>`<p><b>${esc(b.title)}</b> · ${esc(b.user)}<br>${b.days} дн. · ${'⭐'.repeat(b.rating)}<br><span class=m>${esc(b.review)}</span></p>`).join(''):'<p class=m>Пока пусто</p>';
+  return h+'</div>'}
+async function bs(){const t=$('#bt').value.trim();if(!t)return;await run(()=>call('bookStart',{title:t}))}
+async function fin(){await run(()=>call('bookFinish',{rating:$('#rt').value,review:$('#rv').value}))}
+async function run(f){try{await f()}catch(e){alert(e.message)}draw()}
+
+function draw(){
+  const a=$('#app');
+  if(!me){a.innerHTML=`<div class=panel><h2>Кто ты?</h2><select id=nm>${NAMES.map(n=>`<option>${esc(n)}</option>`).join('')}</select><button onclick="login()">Войти</button><p class=m id=er></p></div>`;return}
+  if(!data){a.innerHTML='<p class=m>Загрузка…</p>';return}
+  const v={t:viewToday,s:viewStats,b:viewBooks}[tab]();
+  a.innerHTML=hdr()+v+`<nav>${[['t','🌙','Сегодня'],['s','📊','Итоги'],['b','📖','Книги']].map(([k,i,n])=>`<button class="${tab==k?'on':''}" onclick="tab='${k}';msg='';draw()"><span>${i}</span>${n}</button>`).join('')}</nav>`}
+async function login(){me=$('#nm').value;pin='';
+  try{await call('get');ls('me',me);ls('pin',pin);draw()}catch(e){me=null;draw();$('#er').textContent=e.message}}
+me=ls('me');pin=ls('pin')||'';
+if(me){draw();call('get').then(draw).catch(()=>{me=null;draw()})}else draw();
+</script></body></html>
