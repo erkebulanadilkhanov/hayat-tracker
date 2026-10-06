@@ -14,8 +14,11 @@
 :root{--bg:#0e1a24;--p:#15283a;--t:#e8f0f4;--m:#8fa5b3;--l:#223a4e;--g:#4fb3a5;--on:#06201c;--a1:#4fb3a5;--a2:#f2d98d;--a3:#9aa5f2}
 @media(prefers-color-scheme:light){:root{--bg:#eef3f5;--p:#fff;--t:#14222d;--m:#5f7584;--l:#d6e2e9;--g:#1f7f73;--on:#fff;--a1:#1f9a8b;--a2:#c8941a;--a3:#6572d9}}
 *{box-sizing:border-box}
-body{margin:0;font:16px/1.5 Onest,system-ui,sans-serif;color:var(--t);background:radial-gradient(600px 320px at 50% 0,rgba(79,179,165,.16),transparent) no-repeat,var(--bg);padding:env(safe-area-inset-top) 0 110px}
-main{max-width:520px;margin:auto;padding:18px 16px}
+body{margin:0;font:16px/1.5 Onest,system-ui,sans-serif;color:var(--t);background:radial-gradient(600px 320px at 50% 0,rgba(79,179,165,.16),transparent) no-repeat,var(--bg);}
+html,body{height:100%;overflow:hidden}
+#app{height:100%;display:flex;flex-direction:column}
+.top{flex:none;height:env(safe-area-inset-top);background:var(--bg)}
+.scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:12px 16px 24px}
 header small{color:var(--m);text-transform:capitalize}
 header b{display:block;font:600 28px/1.2 Literata,Georgia,serif;margin-top:2px}
 .hero{display:flex;align-items:center;gap:18px;margin:18px 0 22px}.hero svg{flex:none}
@@ -32,8 +35,12 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 button{background:var(--g);color:var(--on);border:0;font-weight:600;margin-top:12px}
 .row{display:flex;gap:8px}.row button{margin:6px 0 0;padding:12px 0;background:var(--l);color:var(--t)}.row .on{background:var(--g);color:var(--on)}
 .streak{display:flex;align-items:baseline;gap:10px}.streak b{font:600 34px Literata,Georgia,serif;color:var(--a2)}
-nav{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom));display:flex;gap:4px;width:min(92%,440px);padding:6px;border-radius:22px;background:var(--p);border:1px solid var(--l)}
+nav{flex:none;display:flex;gap:4px;width:min(92%,440px);margin:6px auto calc(10px + env(safe-area-inset-bottom));padding:6px;border-radius:22px;background:var(--p);border:1px solid var(--l)}
 nav button{margin:0;padding:8px 0;font-size:12px;font-weight:500;background:none;color:var(--m);border-radius:16px}nav span{display:block;font-size:18px}nav .on{background:var(--l);color:var(--t)}
+input{min-width:0;max-width:100%}
+input[type=date]{-webkit-appearance:none;appearance:none;display:block;min-height:48px;text-align:left}
+input[type=date]::-webkit-date-and-time-value{text-align:left}
+.scroll>*{max-width:520px;margin-left:auto;margin-right:auto}
 </style></head><body><main id="app"></main>
 <script>
 // ВСТАВЬ ссылку веб-приложения (оканчивается на /exec) и свои имена (как в Code.gs)
@@ -112,10 +119,10 @@ async function run(f){try{await f()}catch(e){alert(e.message)}draw()}
 
 function draw(){
   const a=$('#app');
-  if(!me){a.innerHTML=`<div class=panel><h2>Кто ты?</h2><select id=nm>${NAMES.map(n=>`<option>${esc(n)}</option>`).join('')}</select><button onclick="login()">Войти</button><p class=m id=er></p></div>`;return}
-  if(!data){a.innerHTML='<p class=m>Загрузка…</p>';return}
+  if(!me){a.innerHTML=`<div class=top></div><div class=scroll><div class=panel><h2>Кто ты?</h2><select id=nm>${NAMES.map(n=>`<option>${esc(n)}</option>`).join('')}</select><button onclick="login()">Войти</button><p class=m id=er></p></div></div>`;return}
+  if(!data){a.innerHTML='<div class=top></div><div class=scroll><p class=m>Загрузка…</p></div>';return}
   const v={t:viewToday,s:viewStats,b:viewBooks}[tab]();
-  a.innerHTML=hdr()+v+`<nav>${[['t','🌙','Сегодня'],['s','📊','Итоги'],['b','📖','Книги']].map(([k,i,n])=>`<button class="${tab==k?'on':''}" onclick="tab='${k}';msg='';draw()"><span>${i}</span>${n}</button>`).join('')}</nav>`}
+  a.innerHTML='<div class=top></div><div class=scroll>'+hdr()+v+'</div>'+`<nav>${[['t','🌙','Сегодня'],['s','📊','Итоги'],['b','📖','Книги']].map(([k,i,n])=>`<button class="${tab==k?'on':''}" onclick="tab='${k}';msg='';draw()"><span>${i}</span>${n}</button>`).join('')}</nav>`}
 async function login(){me=$('#nm').value;pin='';
   try{await call('get');ls('me',me);ls('pin',pin);draw()}catch(e){me=null;draw();$('#er').textContent=e.message}}
 me=ls('me');pin=ls('pin')||'';
