@@ -22,7 +22,7 @@ html,body{height:100%;overflow:hidden}
 header small{color:var(--m);text-transform:capitalize}
 header b{display:block;font:600 28px/1.2 Literata,Georgia,serif;margin-top:2px}
 .hero{display:flex;align-items:center;gap:18px;margin:18px 0 22px}.hero svg{flex:none}
-.tr,.ar{fill:none;stroke-width:14;stroke-linecap:round;transform:rotate(-90deg);transform-origin:110px 110px}.tr{stroke:var(--l)}
+.tr,.ar{fill:none;stroke-width:14;stroke-linecap:round;transform:rotate(-90deg);transform-origin:100px 100px}.tr{stroke:var(--l)}
 .ar{animation:f 1.1s ease-out}@keyframes f{from{stroke-dashoffset:var(--c)}}
 @media(prefers-reduced-motion:reduce){.ar{animation:none}}
 .big{font:600 34px Literata,Georgia,serif;fill:var(--t)}.cap{font-size:13px;fill:var(--m)}
@@ -41,11 +41,17 @@ input{min-width:0;max-width:100%}
 input[type=date]{-webkit-appearance:none;appearance:none;display:block;min-height:48px;text-align:left}
 input[type=date]::-webkit-date-and-time-value{text-align:left}
 .scroll>*{max-width:520px;margin-left:auto;margin-right:auto}
+.gl{flex:1;display:grid;gap:6px;font-size:14px}.gl div{display:flex;gap:6px;color:var(--m)}.gl b{margin-left:auto;font-weight:600;color:var(--t)}.gl .ok,.gl .ok b{color:var(--a1)}
 </style></head><body><main id="app"></main>
 <script>
 // ВСТАВЬ ссылку веб-приложения (оканчивается на /exec) и свои имена (как в Code.gs)
 const API='https://script.google.com/macros/s/AKfycbzwdyrcs-bAg51369RxlA9SrdVcvWDbBmR9bhWu0QYxZ8jfuqKDnCZiLnGpInXL-dswbg/exec', NAMES=['yerkebulan','hayat'];
-const G={namaz:5,books:10,quran:5}, LBL={namaz:'намаз',books:'книги',quran:'Құран'};
+// Дневные минимумы у каждого свои. b = да/нет, w = недельная цель (g раз в неделю)
+const GOALS={
+ yerkebulan:[{k:'quran',n:'Құран',u:'стр.',g:3},{k:'risale',n:'Рисале',u:'стр.',g:3},{k:'pyrlanta',n:'Пырланты',u:'стр.',g:6},{k:'dinleme',n:'Динлеме',u:'мин.',g:6},{k:'tasbihat',n:'Тасбихат',b:1,g:1},{k:'tahajjud',n:'Тахаджуд',b:1,w:1,g:2},{k:'oraza',n:'Ораза',b:1,w:1,g:1}],
+ hayat:[{k:'quran',n:'Құран',u:'стр.',g:5},{k:'risale',n:'Рисале',u:'стр.',g:4},{k:'kitap',n:'Кітап',u:'стр.',g:10},{k:'dinleme',n:'Динлеме',u:'мин.',g:10},{k:'tasbihat',n:'Тасбихат',b:1,g:1},{k:'qaza',n:'Қаза намаз',u:'раз',g:5},{k:'tahajjud',n:'Тахаджуд',b:1,w:1,g:3},{k:'kazhet',n:'Кажет намаз',b:1,w:1,g:2}]
+};
+let dr={};
 let me=null,pin='',data=null,tab='t',day='',nz=0,msg='';
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -55,49 +61,34 @@ async function call(a,p={}){
   const j=await r.json();if(j.error)throw new Error(j.error);data=j;if(!day)day=j.today;return j}
 const add=(s,n)=>{const d=new Date(s+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
 const ws=s=>add(s,-((new Date(s+'T12:00:00Z').getUTCDay()+6)%7)), fm=s=>s.slice(8)+'.'+s.slice(5,7);
-const full=e=>!!e&&e.namaz>=5&&e.books>=10&&e.quran>=5;
 const ent=(u,d)=>data.days.find(x=>x.user===u&&x.day===d);
-function streak(u,d){if(!full(ent(u,d))&&d===data.today)d=add(d,-1);let n=0;while(full(ent(u,d))){n++;d=add(d,-1)}return n}
-function pairStreak(d){const ok=x=>NAMES.every(u=>full(ent(u,x)));if(!ok(d)&&d===data.today)d=add(d,-1);let n=0;while(ok(d)){n++;d=add(d,-1)}return n}
-
-function dayHtml(d){
-  let h='',gaps=[],pg=0,ans=0,fl=0;
-  NAMES.forEach(u=>{const e=ent(u,d);
-    if(!e){h+=`<p><b>${esc(u)}</b>: ещё не отметился(лась)</p>`;return}
-    ans++;pg+=e.books+e.quran;
-    const pct=Math.round(100*(Math.min(e.namaz,5)/5+Math.min(e.books,10)/10+Math.min(e.quran,5)/5)/3);
-    if(full(e))fl++;else for(const k in G)if(e[k]<G[k])gaps.push(`${u}: ${LBL[k]} (не хватило ${G[k]-e[k]})`);
-    h+=`<p><b>${esc(u)}</b>${full(e)?' ✅':''}<br>Намаз ${e.namaz}/5 · Книги ${e.books}/10 · Құран ${e.quran}/5<br><span class=m>Выполнено ${pct}% · серия ${streak(u,d)} дн.</span></p>`});
-  h+=`<p>Вместе: ${pg} стр.</p>`;
-  if(ans==NAMES.length)h+=fl==ans?`<p>🌙 Оба выполнили все цели! Общая серия: ${pairStreak(d)} дн.</p>`:`<p class=m>Можно добрать:<br>${gaps.map(esc).join('<br>')}</p>`;
-  return h}
-
-function weekHtml(m){
-  const days=[0,1,2,3,4,5,6].map(i=>add(m,i));let h='',pg=0;const cap={namaz:0,books:0,quran:0};
-  NAMES.forEach(u=>{const es=days.map(d=>ent(u,d)).filter(Boolean),s=k=>es.reduce((a,e)=>a+e[k],0);
-    es.forEach(e=>{for(const k in G)cap[k]+=Math.min(e[k],G[k])});pg+=s('books')+s('quran');
-    h+=`<p><b>${esc(u)}</b><br>Намаз ${s('namaz')}/35 · Книги ${s('books')} стр. · Құран ${s('quran')} стр.<br><span class=m>Дней со всеми целями: ${days.filter(d=>full(ent(u,d))).length}/7</span></p>`});
-  const both=days.filter(d=>NAMES.every(u=>full(ent(u,d)))).length;
-  const w=Object.keys(G).map(k=>[k,cap[k]/(G[k]*7*NAMES.length)]).sort((a,b)=>a[1]-b[1])[0];
-  return h+`<p>Вместе: ${pg} стр. · оба выполнили всё: ${both}/7</p><p class=m>${w[1]>=1?'🌟 Все цели недели выполнены!':'Слабое место: '+LBL[w[0]]+' ('+Math.round(w[1]*100)+'%)'}</p>`}
-
-function rings(e){const R=[[90,'namaz','var(--a1)'],[68,'books','var(--a2)'],[46,'quran','var(--a3)']];let done=0,s='',lg='';
-  R.forEach(([r,k,c])=>{const v=+e[k]||0,p=Math.min(1,v/G[k]),L=+(2*Math.PI*r).toFixed(1);if(p>=1)done++;
-    s+=`<circle cx=110 cy=110 r=${r} class=tr /><circle cx=110 cy=110 r=${r} stroke="${c}" class=ar style="--c:${L};stroke-dasharray:${L};stroke-dashoffset:${(L*(1-p)).toFixed(1)}"/>`;
-    lg+=`<div><i style="background:${c}"></i>${LBL[k]}<b>${v}/${G[k]}</b></div>`});
-  return `<section class=hero><svg viewBox="0 0 220 220" width=190 height=190 role=img aria-label="Прогресс дня">${s}<text x=110 y=112 text-anchor=middle class=big>${done}/3</text><text x=110 y=134 text-anchor=middle class=cap>целей</text></svg><div class=lg>${lg}</div></section>`}
+const val=(u,d,k)=>{const e=ent(u,d);return(e&&e.v&&+e.v[k])||0};
+const dg=u=>GOALS[u].filter(x=>!x.w);
+const full=(u,d)=>!!ent(u,d)&&dg(u).every(x=>val(u,d,x.k)>=x.g);
+const wk=(u,d,k)=>[0,1,2,3,4,5,6].reduce((a,i)=>a+val(u,add(ws(d),i),k),0);
+function streak(u,d){if(!full(u,d)&&d===data.today)d=add(d,-1);let n=0;while(full(u,d)){n++;d=add(d,-1)}return n}
+function pairStreak(d){const ok=x=>NAMES.every(u=>full(u,x));if(!ok(d)&&d===data.today)d=add(d,-1);let n=0;while(ok(d)){n++;d=add(d,-1)}return n}
+const cell=(u,d,x)=>x.b?`${x.n}: ${val(u,d,x.k)?'да':'нет'}`:`${x.n} ${val(u,d,x.k)}/${x.g}`;
+function dayHtml(d){let h='',both=0;
+  NAMES.forEach(u=>{if(!ent(u,d)){h+=`<p><b>${esc(u)}</b>: ещё не отметился(лась)</p>`;return}
+    const ds=dg(u),ok=ds.filter(x=>val(u,d,x.k)>=x.g).length;if(ok==ds.length)both++;
+    h+=`<p><b>${esc(u)}</b>${ok==ds.length?' ✅':''} <span class=m>${ok}/${ds.length} · серия ${streak(u,d)} дн.</span><br><span class=m>${GOALS[u].map(x=>cell(u,d,x)).join(' · ')}</span></p>`});
+  return h+(both==NAMES.length?`<p>🌙 Оба выполнили дневные цели! Общая серия: ${pairStreak(d)} дн.</p>`:'')}
+function weekHtml(m){const days=[0,1,2,3,4,5,6].map(i=>add(m,i));let h='';
+  NAMES.forEach(u=>{const f=days.filter(d=>full(u,d)).length;
+    h+=`<p><b>${esc(u)}</b><br>Дней со всеми дневными целями: ${f}/7<br><span class=m>${GOALS[u].map(x=>x.w?`${x.n}: ${wk(u,m,x.k)} из ${x.g} ${wk(u,m,x.k)>=x.g?'✅':''}`:`${x.n}: ${days.filter(d=>val(u,d,x.k)>=x.g).length}/7 дн.`).join('<br>')}</span></p>`});
+  return h+`<p>Оба выполнили дневные цели: ${days.filter(d=>NAMES.every(u=>full(u,d))).length}/7 дн.</p>`}
+function rings(){const u=me,ds=dg(u),ok=ds.filter(x=>val(u,day,x.k)>=x.g).length,p=ok/ds.length,r=80,L=+(2*Math.PI*r).toFixed(1);
+  const gl=GOALS[u].map(x=>{const v=val(u,day,x.k),w=x.w?wk(u,day,x.k):v,done=x.w?w>=x.g:v>=x.g;
+    return `<div class="${done?'ok':''}">${done?'✓ ':''}${x.n}<b>${x.w?w+'/'+x.g+' нед.':x.b?(v?'да':'нет'):v+'/'+x.g}</b></div>`}).join('');
+  return `<section class=hero><svg viewBox="0 0 200 200" width=150 height=150 role=img aria-label="Прогресс дня"><circle cx=100 cy=100 r=${r} class=tr /><circle cx=100 cy=100 r=${r} stroke="var(--a1)" class=ar style="--c:${L};stroke-dasharray:${L};stroke-dashoffset:${(L*(1-p)).toFixed(1)}"/><text x=100 y=104 text-anchor=middle class=big>${ok}/${ds.length}</text><text x=100 y=128 text-anchor=middle class=cap>дневных целей</text></svg><div class=gl>${gl}</div></section>`}
 function hdr(){const d=new Date((day||data.today)+'T12:00:00Z').toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'});return `<header><small>${d}</small><b>Салам, ${esc(me)}</b></header>`}
-function viewToday(){
-  const e=ent(me,day)||{namaz:0,books:'',quran:''};nz=e.namaz;
-  return rings(e)+`<div class=panel><h2>Отметка</h2><input type=date id=dt value="${day}" onchange="day=this.value;draw()">
-  <p class=m>Намаз без қаза (цель 5)</p><div class=row>${[0,1,2,3,4,5].map(i=>`<button class="${i==nz?'on':''}" onclick="pick(${i})">${i}</button>`).join('')}</div>
-  <p class=m>Страниц духовных книг (цель 10)</p><input id=bk type=number inputmode=numeric min=0 value="${e.books}">
-  <p class=m>Страниц Құран (цель 5)</p><input id=qr type=number inputmode=numeric min=0 value="${e.quran}">
-  <button onclick="save()">Сохранить</button><p class=m>${msg}</p></div>
-  <div class="panel streak"><b>${streak(me,data.today)}</b><span>дн. подряд со всеми целями</span></div>`}
-function pick(i){nz=i;document.querySelectorAll('.row button').forEach((b,j)=>b.className=j==i?'on':'')}
-async function save(){msg='';try{await call('save',{day,namaz:nz,books:$('#bk').value||0,quran:$('#qr').value||0});msg='✅ Сохранено'}catch(e){msg='Ошибка: '+e.message}draw()}
-
+function viewToday(){dr={...((ent(me,day)||{}).v||{})};
+  const f=GOALS[me].map(x=>x.b?`<p class=m>${x.n}${x.w?` (минимум ${x.g} в неделю)`:' (1 раз в день)'}</p><div class=row>${[0,1].map(v=>`<button data-k=${x.k} data-v=${v} class="${(+dr[x.k]||0)===v?'on':''}" onclick="setv('${x.k}',${v})">${v?'Да':'Нет'}</button>`).join('')}</div>`:`<p class=m>${x.n}, ${x.u} (минимум ${x.g})</p><input id=g_${x.k} type=number inputmode=numeric min=0 value="${dr[x.k]||''}">`).join('');
+  return rings()+`<div class=panel><h2>Отметка</h2><input type=date id=dt value="${day}" onchange="day=this.value;draw()">${f}<button onclick="save()">Сохранить</button><p class=m>${msg}</p></div><div class="panel streak"><b>${streak(me,data.today)}</b><span>дн. подряд с дневными целями</span></div>`}
+function setv(k,v){dr[k]=v;document.querySelectorAll(`[data-k="${k}"]`).forEach(b=>b.className=+b.dataset.v===v?'on':'')}
+async function save(){msg='';const v={...dr};GOALS[me].filter(x=>!x.b).forEach(x=>{v[x.k]=+$('#g_'+x.k).value||0});
+  try{await call('save',{day,data:JSON.stringify(v)});msg='✅ Сохранено'}catch(e){msg='Ошибка: '+e.message}draw()}
 function viewStats(){
   return `<div class=panel><h2>Итоги дня</h2><input type=date value="${day}" onchange="day=this.value;draw()">${dayHtml(day)}</div>
   <div class=panel><h2>Неделя ${fm(ws(day))} – ${fm(add(ws(day),6))}</h2>${weekHtml(ws(day))}</div>`}
